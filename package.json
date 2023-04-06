@@ -7,10 +7,14 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node --experimental-modules index.js"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "node-fetch": "^3.3.1"
-  }
+  },
+  "repository": "https://github.com/kty990/Package"
 }
