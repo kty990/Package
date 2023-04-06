@@ -42,7 +42,7 @@ class ParentNode {
     }
 }
 
-const FROZEN_ERROR = new Error("Unable to complete process. Scraper has already been used and is therefore frozen.");
+const FROZEN_ERROR = new Error("Unable to complete process. Scraper is in use and is therefore frozen.");
 class Scraper {
     constructor() {
         this.urls = [];
@@ -82,7 +82,10 @@ class Scraper {
      */
     async debug(url) {
         if (this.frozen) throw FROZEN_ERROR;
-        return await request(url);
+        this.frozen = true;
+        let result = await request(url);
+        this.frozen = false;
+        return result;
     }
 
     /**
@@ -96,7 +99,9 @@ class Scraper {
      *         - Done by sending through run and incrementing
      */
     async run(url, iteration) {
-        if (this.frozen) throw FROZEN_ERROR;
+        if (this.frozen && (iteration == 1 || iteration == null)) throw FROZEN_ERROR;
+        this.frozen = true;
+        this.urls = [];
         let root = new ParentNode(null, null);
         root.scope = (iteration || 1);
         let CurrentRequest = await request(url);
@@ -107,6 +112,7 @@ class Scraper {
             root.AddChildren(z);
             // If parent node, set in children of higher scope
         }
+        this.frozen = false;
         return root
     }
 }
