@@ -1,23 +1,52 @@
 import fetch from 'node-fetch';
 
+const assert = (value, msg) => {
+    if (!value) {
+        throw new Error(msg);
+    }
+}
+
 const request = (url) => {
+    assert(typeof url == "string", "Can't request a non-string object");
     return new Promise((resolve, reject) => {
         fetch(url).then(res => {
             resolve(res.text())
-        });
+        })
+            .catch(err => {
+                console.error(err);
+                console.debug(`URL: ${url}`);
+            });
     });
 }
 
 export { request }
 
 class ParentNode {
-    constructor(next, previous) {
+    constructor(next, previous, nodeType) {
         this.children = [];
         this.parent = null;
+        this.data = null;
         this.previous_parent_node = previous || null;
         this.next_parent_node = next || null;
-        this.nodeType = nodeType;
+        this.nodeType = nodeType || "directory";
         this.scope = 0; // default
+    }
+
+    /**
+     * root.data = {
+            "request": CurrentRequest,
+            "url": url
+        };
+     */
+
+    log() {
+        let indent = "  ".repeat(this.scope); // calculate the indentation level based on the node's scope
+        if (this.data !== null) {
+            console.log(indent + "- " + this.data["url"]); // log the current node's data
+        }
+        for (let child of this.children) {
+            child.log(); // recursively log the child nodes
+        }
     }
 
     GetParent() {
@@ -50,33 +79,34 @@ const FROZEN_ERROR = new Error("Unable to complete process. Scraper is in use an
 class Scraper {
     constructor() {
         this.urls = [];
-        const NextLink = (str, i) => {
-            let open = str.indexOf("<a", (i || 0));
-            let close = str.indexOf("</a>", (open || 0));
 
-            if (open != -1 && close != -1) {
-                let x_open = str.indexOf("href=\"", open);
-                let x_close = str.indexOf("\"", x_open);
-                let link = str.substring(x_open, x_close);
-                if (this.urls.includes(link)) {
-                    return null;
-                }
-                return [link, close];
-            }
-            return null;
-        }
+    }
 
-        const GetLinks = (ReqResult) => {
-            let links = [];
-            let link = NextLink(ReqResult, 0);
-            while (link !== null) {
-                links.push(link);
-                link = NextLink(ReqResult, link[1])
+    NextLink(str, i) {
+        let open = str.indexOf("<a", (i || 0));
+        let close = str.indexOf("</a>", (open || 0) + 6);
+
+        if (open != -1 && close != -1) {
+            let x_open = str.indexOf("href=\"", open) + 6;
+            let x_close = str.indexOf("\"", x_open);
+            let link = str.substring(x_open, x_close);
+            if (this.urls.includes(link)) {
+                return null;
             }
-            return links;
+            console.log(`New Link: ${link}`);
+            return [link, close];
         }
-        this.GetLinks = GetLinks;
-        this.NextLink = NextLink;
+        return null;
+    }
+
+    GetLinks(ReqResult) {
+        let links = [];
+        let link = this.NextLink(ReqResult, 0);
+        while (link !== null) {
+            links.push(link);
+            link = this.NextLink(ReqResult, link[1])
+        }
+        return links;
     }
 
     /**
@@ -104,20 +134,34 @@ class Scraper {
      */
     async run(url, iteration) {
         if (this.frozen && (iteration == 1 || iteration == null)) throw FROZEN_ERROR;
+        console.log(`NEW RUN: ${url}\t${iteration}`);
         this.frozen = true;
         this.urls = [];
         let root = new ParentNode(null, null);
         root.scope = (iteration || 1);
-        let CurrentRequest = await request(url);
-        root.data = CurrentRequest;
-        let links = GetLinks(CurrentRequest);
+        let CurrentRequest;
+        try {
+            CurrentRequest = await request(url);
+        } catch (err) {
+            console.error(err);
+            return root;
+        }
+        root.data = {
+            "request": CurrentRequest,
+            "url": url
+        };
+        this.urls.push(url);
+        let links = this.GetLinks(CurrentRequest);
+        console.log(links);
         for (let x = 0; x < links.length; x++) {
+            console.log(`ATTEMPTING NEW RUN: ${links[x]}`);
             let z = await this.run(links[x].url, (iteration || 2));
             root.AddChildren(z);
             // If parent node, set in children of higher scope
         }
         this.frozen = false;
-        return root
+        console.log(this.urls);
+        return root;
     }
 }
 
