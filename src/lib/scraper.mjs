@@ -119,6 +119,12 @@ class Scraper {
                 return null;
             }
             console.log(`New Link: ${link}`);
+            if (link.indexOf("https/") != -1 || link.indexOf("http/")) {
+                link = link.split("/");
+                let tmp = link.splice(0, 1);
+                link.unshift(`${tmp}:/`);
+                link = link.join("/");
+            }
             return [link, close];
         }
         return null;
