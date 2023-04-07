@@ -82,6 +82,28 @@ class Scraper {
 
     }
 
+    ConvertLink(currentUrl, link) {
+        let newLink = currentUrl.replace(":/", "").split("/");
+        let ss = link.replace(":/", "").split("/"); // splitstring
+        console.log(ss);
+
+        // [ '..', 'main', 'signup' ] ======= POP FROM SS > add 'main' > add 'signup' > return
+
+        for (let x = 0; x < ss.length; x++) {
+            switch (ss[x]) {
+                case '..':
+                    newLink.splice(newLink.length - 2, 2);
+                    continue;
+                default:
+                    newLink.push(ss[x]);
+            }
+        }
+        try {
+            newLink = newLink.join("/");
+        } catch (err) { }
+        return newLink || null;
+    }
+
     NextLink(str, i, currentUrl) {
         let open = str.indexOf("<a", (i || 0));
         let close = str.indexOf("</a>", (open || 0) + 6);
@@ -89,7 +111,10 @@ class Scraper {
         if (open != -1 && close != -1) {
             let x_open = str.indexOf("href=\"", open) + 6;
             let x_close = str.indexOf("\"", x_open);
-            let link = str.substring(x_open, x_close);
+            let link = this.ConvertLink(currentUrl, str.substring(x_open, x_close));
+
+            if (link == null) return null;
+
             if (this.urls.includes(link)) {
                 return null;
             }
