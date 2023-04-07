@@ -82,7 +82,7 @@ class Scraper {
 
     }
 
-    NextLink(str, i) {
+    NextLink(str, i, currentUrl) {
         let open = str.indexOf("<a", (i || 0));
         let close = str.indexOf("</a>", (open || 0) + 6);
 
@@ -99,12 +99,12 @@ class Scraper {
         return null;
     }
 
-    GetLinks(ReqResult) {
+    GetLinks(ReqResult, currentUrl) {
         let links = [];
-        let link = this.NextLink(ReqResult, 0);
+        let link = this.NextLink(ReqResult, 0, currentUrl);
         while (link !== null) {
             links.push(link);
-            link = this.NextLink(ReqResult, link[1])
+            link = this.NextLink(ReqResult, link[1], currentUrl)
         }
         return links;
     }
@@ -151,11 +151,11 @@ class Scraper {
             "url": url
         };
         this.urls.push(url);
-        let links = this.GetLinks(CurrentRequest);
+        let links = this.GetLinks(CurrentRequest, url);
         console.log(links);
         for (let x = 0; x < links.length; x++) {
             console.log(`ATTEMPTING NEW RUN: ${links[x]}`);
-            let z = await this.run(links[x].url, (iteration || 2));
+            let z = await this.run(links[x][0], (iteration || 2));
             root.AddChildren(z);
             // If parent node, set in children of higher scope
         }
