@@ -24,7 +24,7 @@ class Stack {
         if (!this.root) throw EMPTY_STACK_ERROR;
         let tmp = this.root;
         this.root = this.root.next;
-        return tmp;
+        return tmp.data;
     }
 
     log() {
@@ -32,9 +32,16 @@ class Stack {
         let tmp = this.root;
         let s = `${tmp.data} `;
         while (tmp.next) {
-            s = s + `> ${tmp.data} `;
+            if (tmp.data) {
+                s = s + `> ${tmp.data.ConvertToString()} `;
+            }
+            tmp = tmp.next;
         }
         console.log(s);
+    }
+
+    isEmpty() {
+        return this.root == null;
     }
 }
 
